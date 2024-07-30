@@ -25,11 +25,18 @@ in
         description = mdDoc "Log verbosity for console.";
       };
 
-      inputDataPath = mkOption {
+      crawlerPath = mkOption {
         type = types.path;
         default = "/home/p2p-crawler/";
         example = "/scratch/results/p2p-crawler";
         description = mdDoc "Directory containing p2p-crawler results.";
+      };
+
+      resultPath = mkOption {
+        type = types.path;
+        default = "/home/seed-exporter/";
+        example = "/scratch/results/seed-exporter";
+        description = mdDoc "Result directory.";
       };
 
       uploadResult = {
@@ -100,7 +107,8 @@ in
       serviceConfig = {
         ExecStart = ''${seed-exporter}/bin/seed-exporter \
           --log-level ${cfg.logLevel} \
-          --input ${cfg.inputDataPath} \
+          --crawler-path ${cfg.crawlerPath} \
+          --result-path ${cfg.resultPath} \
           # TODO: untested
           ${optionalString (cfg.uploadResult.enable != null) "--upload-result --ftp-address ${cfg.uploadResult.address} --ftp-port ${cfg.uploadResult.ftp.port} --upload-user ${cfg.uploadResult.ftp.user} --upload-password ${cfg.uploadResult.ftp.password} --upload-path ${cfg.uploadResult.ftp.destination} "}
         '';
