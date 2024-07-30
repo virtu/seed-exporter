@@ -14,4 +14,4 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-seed-exporter = "seed_exporter.run:main"
+seed-exporter = "seed_exporter.cli:main"
