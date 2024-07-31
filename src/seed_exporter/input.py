@@ -43,6 +43,8 @@ class InputReader:
             df["timestamp"] = timestamp
             data_frames.append(df)
         combined_df = pd.concat(data_frames).set_index("timestamp")
+        combined_df.index = pd.to_datetime(combined_df.index)
+        combined_df.rename(columns={"host": "address"}, inplace=True)
         elapsed = dt.datetime.now() - time_start
         log.info(
             "Consolidated %s rows from %d files in %.2fs",
