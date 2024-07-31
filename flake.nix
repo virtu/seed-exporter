@@ -26,7 +26,7 @@
       };
 
       devShells.default = pkgs.mkShell {
-        packages = with pkgs; [ poetry ];
+        packages = with pkgs; [ poetry python3 ];
       };
     });
 }
