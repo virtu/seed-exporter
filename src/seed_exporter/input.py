@@ -33,17 +33,21 @@ class InputReader:
         files = self._find_matching_files(date_range)
         log.debug("Found %s input files: %s", len(files), files)
 
+        time_start = dt.datetime.now()
         data_frames = []
         for file in files:
-            timestamp = dt.datetime.fromisoformat(file.name.split("Z_")[0])
+            timestamp_str = file.name.split("Z_")[0]
+            timestamp = dt.datetime.strptime(timestamp_str, "%Y-%m-%dT%H-%M-%S")
             df = pd.read_csv(file)
             log.debug("Read %s rows from %s", len(df), file)
             df["timestamp"] = timestamp
             data_frames.append(df)
         combined_df = pd.concat(data_frames).set_index("timestamp")
-        log.debug(
-            "Consolidated %s data frames with %s rows",
-            len(data_frames),
+        elapsed = dt.datetime.now() - time_start
+        log.info(
+            "Consolidated %s rows from %d files in %.2fs",
             len(combined_df),
+            len(files),
+            elapsed.total_seconds(),
         )
         return combined_df
