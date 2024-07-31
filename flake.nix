@@ -2,8 +2,8 @@
   description = "Bitcoin seed exporter";
 
   inputs = {
-    flake-utils.url = "github:numtide/flake-utils";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
     poetry2nix = {
       url = "github:nix-community/poetry2nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -15,7 +15,7 @@
   } // flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = nixpkgs.legacyPackages.${system};
-      inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryApplication;
+      inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryApplication mkPoetryEnv;
     in
     {
       packages = {
@@ -25,8 +25,18 @@
         default = self.packages.${system}.seed-exporter;
       };
 
-      devShells.default = pkgs.mkShell {
-        packages = with pkgs; [ poetry python3 ];
+      devShell = pkgs.mkShell {
+        buildInputs = with pkgs; [
+          pylint
+          poetry
+          (mkPoetryEnv {
+            projectDir = ./.;
+            editablePackageSources = {
+              seed-exporter = ./src;
+            };
+          })
+        ];
       };
-    });
+    }
+  );
 }
