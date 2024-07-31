@@ -3,7 +3,7 @@
 
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     poetry2nix = {
       url = "github:nix-community/poetry2nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -26,7 +26,7 @@
       };
 
       devShells.default = pkgs.mkShell {
-        packages = with pkgs; [ poetry ];
+        packages = with pkgs; [ poetry python3 ];
       };
     });
 }
