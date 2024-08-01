@@ -12,14 +12,14 @@ import pandas as pd
 class InputReader:
     """Class to read input data from p2p-crawler results."""
 
-    path: str
+    path: Path
     timestamp: dt.datetime
 
     def _find_matching_files(self, date_range) -> list[Path]:
         """Find relevant input files, ensuring data is available for the last 30 days."""
         matching_files = []
         for date in date_range:
-            files = list(Path(self.path).glob(f"{date}T*reachable_nodes.csv.bz2"))
+            files = list(self.path.glob(f"{date}T*reachable_nodes.csv.bz2"))
             if not files:
                 raise FileNotFoundError(f"No data found for date: {date}")
             matching_files.extend(files)
@@ -39,7 +39,7 @@ class InputReader:
         num_total = len(df)
         df = df[df["handshake_successful"] == True]
         num_valid = len(df)
-        df["user_agent"] = df["user_agent"].fillna("(empty)")
+        df.loc[df["user_agent"].isnull(), "user_agent"] = "(empty)"
         log.debug(
             "Dropping nodes with failed handshake (original=%d, dropped=%d, remaining=%d)",
             num_total,

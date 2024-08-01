@@ -103,6 +103,7 @@ class DataProcessing:
         # postprocessing
         # 1. fill in nan values in the availability shares columns
         # 2. ensure there's no nan records in the remaining columns
+        # 3. add 'good' column (presume all nodes to be good)
         share_cols = list(windows.keys())
         results[share_cols] = results[share_cols].fillna(0)
         nan_rows = results[results.isna().any(axis=1)]
@@ -113,4 +114,5 @@ class DataProcessing:
                 address, port = row["address"], row["port"]
                 error_str += f"\n{address}:{port}: {nan_columns}"
             raise ValueError(f"Missing (meta)data: {error_str}")
+        results["good"] = 1
         return results
