@@ -20,9 +20,9 @@ class OutputWriter:
         """
         Apply formatting expected by Bitcoin Core's makeseeds.py:
 
-        # address                    good  lastSuccess    %(2h)   %(8h)   %(1d)   %(7d)  %(30d)  blocks      svcs  version
-        [2a01:4f9:1a:a966::2]:8333   1      1722411779  100.00% 100.00% 100.00% 100.00% 100.00%  854768  00000409  70016 "/Satoshi:22.0.0/"
-        [2a01:4f8:272:4cd9::2]:8333  1      1722411841  100.00% 100.00% 100.00% 100.00% 100.00%  854768  00000409  70016 "/Satoshi:24.0.1/"
+        # address                   good lastSuccess   %(2h)   %(8h)   %(1d)   %(7d)  %(30d)  blocks      svcs  version
+        [2a01:4f9:1a:a966::2]:8333  1     1722411779 100.00% 100.00% 100.00% 100.00% 100.00%  854768  00000409  70016 "/Satoshi:22.0.0/"
+        [2a01:4f8:272:4cd9::2]:8333 1     1722411841 100.00% 100.00% 100.00% 100.00% 100.00%  854768  00000409  70016 "/Satoshi:24.0.1/"
 
         Necessary steps:
         1. Rename columns
@@ -65,7 +65,7 @@ class OutputWriter:
         df["blocks"] = df["blocks"].astype(int)
 
         df["version"] = df["version"].astype(int)
-        df["version"] = df["version"].astype(str) + " " + df["user_agent"]
+        df["version"] = df["version"].astype(str) + " " + '"' + df["user_agent"] + '"'
         df.drop(columns=["user_agent"], inplace=True)
 
         # todo: add good once you know what that means
