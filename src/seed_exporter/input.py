@@ -25,13 +25,36 @@ class InputReader:
             matching_files.extend(files)
         return matching_files
 
+    @staticmethod
+    def postprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+        """Perform post-processing:
+        1. Ensure DateTimeIndex
+        2. Rename host column to address
+        3. Drop nodes who did not complete the handshake
+        4. Replace missing user-agent data with "(empty)"
+        """
+
+        df.index = pd.to_datetime(df.index)
+        df.rename(columns={"host": "address"}, inplace=True)
+        num_total = len(df)
+        df = df[df["handshake_successful"] == True]
+        num_valid = len(df)
+        df["user_agent"] = df["user_agent"].fillna("(empty)")
+        log.debug(
+            "Dropping nodes with failed handshake (original=%d, dropped=%d, remaining=%d)",
+            num_total,
+            num_total - num_valid,
+            num_valid,
+        )
+        return df
+
     def get_data(self) -> pd.DataFrame:
         """Read input files and return a combined DataFrame."""
 
         current_day = self.timestamp.date()
         date_range = [current_day - dt.timedelta(days=i) for i in range(30)]
         files = self._find_matching_files(date_range)
-        log.debug("Found %s input files: %s", len(files), files)
+        log.debug("Found %s input files: %s", len(files), [f.name for f in files])
 
         time_start = dt.datetime.now()
         data_frames = []
@@ -43,11 +66,13 @@ class InputReader:
             df["timestamp"] = timestamp
             data_frames.append(df)
         combined_df = pd.concat(data_frames).set_index("timestamp")
+        result = InputReader.postprocess_data(combined_df)
+
         elapsed = dt.datetime.now() - time_start
         log.info(
             "Consolidated %s rows from %d files in %.2fs",
-            len(combined_df),
+            len(result),
             len(files),
             elapsed.total_seconds(),
         )
-        return combined_df
+        return result

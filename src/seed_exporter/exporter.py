@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from seed_exporter.config import Config
 from seed_exporter.input import InputReader
+from seed_exporter.processing import DataProcessing
 
 
 @dataclass
@@ -19,5 +20,10 @@ class Exporter:
         log.debug("Starting export...")
         log.debug("Reading input data...")
         input_reader = InputReader(self.conf.crawler_path, self.conf.timestamp)
-        df = input_reader.get_data()
-        log.info("Data processing not implemented: returning")
+        df_input = input_reader.get_data()
+
+        log.debug("Processing input data...")
+        df_stats = DataProcessing.process_data(df_input)
+        print(df_stats)
+
+        log.info("Outputting data not implemented: returning")
