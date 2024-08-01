@@ -4,8 +4,59 @@ import datetime as dt
 import logging as log
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import pandas as pd
+
+
+@dataclass
+class OutputColumn:
+
+    """Class representing an output columns.
+
+    name: name of the column in the output file
+    alignment: < or > for left or right alignment
+    max_width: maximum width of the column
+
+    Columns can either:
+    - come from a column by another name
+      - sometimes without any transformation
+      - sometimes with a type cast
+      - sometimes with a transformation (float to % string, string to quote-surrounded-string, hex-value)
+    - be constructed from multiple columns
+
+    Figure out how to cover all of these as simply as possible.
+    """
+
+    name: str
+    generator: Callable
+    alignment: str = ">"
+
+
+OutputColumns = [
+    OutputColumn(
+        name="address",
+        generator=(
+            lambda row: f"[{row['address']}]:{row['port']}"
+            if ":" in row["address"]
+            else f"{row['address']}:{row['port']}"
+        ),
+        alignment="<",
+    ),
+    OutputColumn(name="lastSuccess", generator=lambda row: row["handshake_timestamp"]),
+    OutputColumn(name="%(2h)", generator=lambda row: f"{row['last_2_hours']:.2%}"),
+    OutputColumn(name="%(8h)", generator=lambda row: f"{row['last_8_hours']:.2%}"),
+    OutputColumn(name="%(1d)", generator=lambda row: f"{row['last_day']:.2%}"),
+    OutputColumn(name="%(7d)", generator=lambda row: f"{row['last_7_days']:.2%}"),
+    OutputColumn(name="%(30d)", generator=lambda row: f"{row['last_30_days']:.2%}"),
+    OutputColumn(name="svcs", generator=lambda row: f"{row['services']:08x}"),
+    OutputColumn(name="blocks", generator=lambda row: int(row["latest_block"])),
+    OutputColumn(
+        name="version",
+        generator=(lambda row: f"{int(row['version'])} \"row['user_agent']\""),
+        alignment="<",
+    ),
+]
 
 
 @dataclass
