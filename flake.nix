@@ -2,7 +2,7 @@
   description = "Bitcoin seed exporter";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
     flake-utils.url = "github:numtide/flake-utils";
     poetry2nix = {
       url = "github:nix-community/poetry2nix";
@@ -11,7 +11,7 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, poetry2nix }: {
-    nixosModules.seedExporter = import ./module.nix self;
+    nixosModules.seed-exporter = import ./module.nix self;
   } // flake-utils.lib.eachDefaultSystem (system:
     let
       pkgs = nixpkgs.legacyPackages.${system};
