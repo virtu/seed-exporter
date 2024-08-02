@@ -66,19 +66,26 @@ class Config(ComponentConfig):
 
     timestamp: datetime.datetime
     log_level: int
-    crawler_path: str
-    result_path: str
+    crawler_path: Path
+    result_path: Path
     upload: bool
     ftp: FTPConfig
 
     @classmethod
     def parse(cls, args):
-        """Create class instance from arguments."""
+        """Create class instance from arguments. Fail early if specified paths
+        do not exist."""
+
+        if not Path(args.crawler_path).exists():
+            raise ValueError(f"--crawler-path {args.crawler_path} does not exist.")
+        if not Path(args.result_path).exists():
+            raise ValueError(f"--result-path {args.crawler_path} does not exist.")
+
         return cls(
             timestamp=datetime.datetime.utcnow(),
             log_level=args.log_level.upper(),
-            crawler_path=args.crawler_path,
-            result_path=args.result_path,
+            crawler_path=Path(args.crawler_path),
+            result_path=Path(args.result_path),
             upload=args.upload_result,
             ftp=FTPConfig.parse(args),
         )
@@ -98,14 +105,14 @@ def parse_args():
 
     parser.add_argument(
         "--crawler-path",
-        type=Path,
+        type=str,
         default="/home/p2p-crawler",
         help="Directory containing p2p-crawler results",
     )
 
     parser.add_argument(
         "--result-path",
-        type=Path,
+        type=str,
         default="/home/seed-exporter",
         help="Directory for results",
     )

@@ -4,7 +4,8 @@ import logging as log
 from dataclasses import dataclass
 
 from seed_exporter.config import Config
-from seed_exporter.input import InputReader
+from seed_exporter.input import CrawlerInputReader
+from seed_exporter.output import FormattedOutputWriter
 from seed_exporter.processing import DataProcessing
 
 
@@ -19,11 +20,12 @@ class Exporter:
 
         log.debug("Starting export...")
         log.debug("Reading input data...")
-        input_reader = InputReader(self.conf.crawler_path, self.conf.timestamp)
+        input_reader = CrawlerInputReader(self.conf.crawler_path, self.conf.timestamp)
         df_input = input_reader.get_data()
 
         log.debug("Processing input data...")
         df_stats = DataProcessing.process_data(df_input)
-        print(df_stats)
 
-        log.info("Outputting data not implemented: returning")
+        log.debug("Writing results...")
+        writer = FormattedOutputWriter(self.conf.result_path, self.conf.timestamp)
+        writer.write(df_stats)

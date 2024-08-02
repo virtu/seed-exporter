@@ -7,19 +7,21 @@ from pathlib import Path
 
 import pandas as pd
 
+from seed_exporter.input import InputColumns
+
 
 @dataclass
-class InputReader:
+class CrawlerInputReader:
     """Class to read input data from p2p-crawler results."""
 
-    path: str
+    path: Path
     timestamp: dt.datetime
 
     def _find_matching_files(self, date_range) -> list[Path]:
         """Find relevant input files, ensuring data is available for the last 30 days."""
         matching_files = []
         for date in date_range:
-            files = list(Path(self.path).glob(f"{date}T*reachable_nodes.csv.bz2"))
+            files = list(self.path.glob(f"{date}T*reachable_nodes.csv.bz2"))
             if not files:
                 raise FileNotFoundError(f"No data found for date: {date}")
             matching_files.extend(files)
@@ -29,21 +31,21 @@ class InputReader:
     def postprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         """Perform post-processing:
         1. Ensure DateTimeIndex
-        2. Rename host column to address
+        2. Rename host column to InputColumns.IP_ADDRESS (address)
         3. Drop nodes who did not complete the handshake
         4. Replace missing user-agent data with "(empty)"
         """
 
         df.index = pd.to_datetime(df.index)
-        df.rename(columns={"host": "address"}, inplace=True)
+        df.rename(columns={"host": InputColumns.IP_ADDRESS}, inplace=True)
         num_total = len(df)
         df = df[df["handshake_successful"] == True]
         num_valid = len(df)
-        df["user_agent"] = df["user_agent"].fillna("(empty)")
+        df.loc[df["user_agent"].isnull(), "user_agent"] = "(empty)"
         log.debug(
-            "Dropping nodes with failed handshake (original=%d, dropped=%d, remaining=%d)",
-            num_total,
+            "Dropping %d nodes with failed handshake (original=%d, remaining=%d)",
             num_total - num_valid,
+            num_total,
             num_valid,
         )
         return df
@@ -66,11 +68,13 @@ class InputReader:
             df["timestamp"] = timestamp
             data_frames.append(df)
         combined_df = pd.concat(data_frames).set_index("timestamp")
-        result = InputReader.postprocess_data(combined_df)
+        result = CrawlerInputReader.postprocess_data(combined_df)
 
         elapsed = dt.datetime.now() - time_start
+        unique_nodes = result.drop_duplicates(subset=["address", "port"])
         log.info(
-            "Consolidated %s rows from %d files in %.2fs",
+            "Extracted %d unique nodes from %d rows in %d files in %.2fs",
+            len(unique_nodes),
             len(result),
             len(files),
             elapsed.total_seconds(),
