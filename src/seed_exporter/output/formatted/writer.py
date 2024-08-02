@@ -3,12 +3,14 @@
 import datetime as dt
 import gzip
 import logging as log
+import socket
 from dataclasses import dataclass
 from pathlib import Path
 from typing import ClassVar
 
 import pandas as pd
 
+from seed_exporter.config import __version__
 from seed_exporter.processing import StatsColumns
 
 from .column_format import ColumnFormatter
@@ -29,12 +31,12 @@ class FormattedOutputWriter:
         df_formatted = ColumnFormatter.format(df_sorted)
         timestamp_str = dt.datetime.strftime(self.timestamp, "%Y-%m-%dT%H-%M-%SZ")
         filename = self.path / f"seeds-{timestamp_str}.txt.gz"
-        self._write_formatted_gz(df_formatted, filename)
+        self._write_formatted_gz(df_formatted, filename, self.timestamp)
         log.info("Wrote %d rows to %s", len(df_formatted), filename)
         return filename
 
     @staticmethod
-    def _write_formatted_gz(df: pd.DataFrame, filename: Path):
+    def _write_formatted_gz(df: pd.DataFrame, filename: Path, timestamp: dt.datetime):
         """
         Write formatted data to file.
 
@@ -46,6 +48,12 @@ class FormattedOutputWriter:
             col: max(df[col].astype(str).apply(len).max(), len(col))
             for col in df.columns
         }
+
+        run_info = (
+            f"# created by {socket.gethostname()} "
+            f"on {timestamp.isoformat(timespec='seconds')}Z "
+            f"with seed-exporter {__version__}"
+        )
 
         header_prefix = "# "
         header = (
@@ -63,7 +71,7 @@ class FormattedOutputWriter:
             ).rstrip()
             for _, row in df.iterrows()
         ]
-        output = "\n".join([header] + formatted_rows)
+        output = "\n".join([run_info] + [header] + formatted_rows)
 
         with gzip.open(filename, "wb") as file:
             file.write(output.encode("utf-8"))
