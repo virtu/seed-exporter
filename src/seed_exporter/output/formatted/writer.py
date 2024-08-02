@@ -48,9 +48,12 @@ class FormattedOutputWriter:
         }
 
         header_prefix = "# "
-        header = header_prefix + " ".join(
-            f"{col:{col_align[col]}{col_width[col] - (len(header_prefix) if col == df.columns[0] else 0)}}"
-            for col in df.columns
+        header = (
+            header_prefix
+            + " ".join(
+                f"{col:{col_align[col]}{col_width[col] - (len(header_prefix) if col == df.columns[0] else 0)}}"
+                for col in df.columns
+            ).rstrip()
         )
 
         formatted_rows = [
