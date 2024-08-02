@@ -7,6 +7,7 @@ from seed_exporter.config import Config
 from seed_exporter.input import CrawlerInputReader
 from seed_exporter.output import FormattedOutputWriter
 from seed_exporter.processing import DataProcessing
+from seed_exporter.upload import FtpUploader
 
 
 @dataclass
@@ -28,4 +29,9 @@ class Exporter:
 
         log.debug("Writing results...")
         writer = FormattedOutputWriter(self.conf.result_path, self.conf.timestamp)
-        writer.write(df_stats)
+        filename = writer.write(df_stats)
+
+        if self.conf.upload:
+            log.debug("Uploading results...")
+            uploader = FtpUploader(self.conf.ftp)
+            uploader.upload_file(filename)

@@ -44,19 +44,39 @@ class FTPConfig(ComponentConfig):
 
     address: str
     port: int
-    user: str
+    username: str
     password: str
-    destination: str
+    destination: Path
+
+    @staticmethod
+    def get_ftp_password(args: argparse.Namespace) -> str:
+        """Read FTP password from file."""
+        file = Path(args.ftp_password_file)
+        if not file.exists() or not file.is_file():
+            raise ValueError(f"Password file {file} does not exist.")
+        with file.open("r", encoding="UTF-8") as f:
+            return f.read().strip()
 
     @classmethod
     def parse(cls, args):
         """Create class instance from arguments."""
+
+        if not args.upload_result:
+            return FTPConfig("", 0, "", "", Path("/"))
+
+        for arg in [attr for attr in dir(args) if attr.startswith("ftp_")]:
+            print(f"arg={arg}, value={getattr(args, arg)}")
+            if not getattr(args, arg):
+                raise ValueError(
+                    f"--{arg.replace('_', '-')} is required when --upload-result is set."
+                )
+
         return cls(
             address=args.ftp_address,
             port=args.ftp_port,
-            user=args.ftp_user,
-            password=args.ftp_password,
-            destination=args.ftp_destination,
+            username=args.ftp_username,
+            password=FTPConfig.get_ftp_password(args),
+            destination=Path(args.ftp_destination),
         )
 
 
@@ -133,29 +153,29 @@ def parse_args():
 
     parser.add_argument(
         "--ftp-port",
-        type=str,
-        default=None,
+        type=int,
+        default=21,
         help="FTP server port",
     )
 
     parser.add_argument(
-        "--ftp-user",
+        "--ftp-username",
         type=str,
         default=None,
         help="FTP server user",
     )
 
     parser.add_argument(
-        "--ftp-password",
+        "--ftp-password-file",
         type=str,
         default=None,
-        help="FTP server password",
+        help="File containing FTP server password",
     )
 
     parser.add_argument(
         "--ftp-destination",
         type=str,
-        default=None,
+        default="public_html/seeds.txt.gz",
         help="FTP server file destination",
     )
 

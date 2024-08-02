@@ -22,7 +22,7 @@ def main():
     exporter = Exporter(conf)
     exporter.run()
 
-    log.info("Finished seed export")
+    log.info("Completed successfully")
 
 
 if __name__ == "__main__":
