@@ -4,16 +4,16 @@ with lib;
 
 let
   inherit (flake.packages.${pkgs.stdenv.hostPlatform.system}) seed-exporter;
-  cfg = config.services.seedExporter;
+  cfg = config.services.seed-exporter;
 in
 {
   options = {
-    services.seedExporter = {
+    services.seed-exporter = {
       enable = mkEnableOption "seed-exporter";
 
       schedule = mkOption {
         type = types.str;
-        default = "*-*-* 04:00:00 UTC";
+        default = "*-*-* 12:00:00 UTC";
         example = "daily";
         description = mdDoc "Systemd OnCalendar interval for running the exporter.";
       };
@@ -54,16 +54,16 @@ in
             example = 42;
             description = mdDoc "Port of the FTP server to upload the results to.";
           };
-          user = mkOption {
+          username = mkOption {
             type = types.nullOr types.str;
             default = null;
             example = "user";
             description = mdDoc "FTP server username";
           };
-          password = mkOption {
+          passwordFile = mkOption {
             type = types.nullOr types.str;
             default = null;
-            example = "password";
+            example = "/path/to/password";
             description = mdDoc "FTP server filename";
           };
           destination = mkOption {
@@ -79,18 +79,29 @@ in
 
   config = mkIf cfg.enable {
     assertions = [
-      # TODO: untested
       {
-        assertion = !config.uploadResult.enable || (
-          config.uploadResult.ftp.address != null &&
-            config.uploadResult.ftp.port != null &&
-            config.uploadResult.ftp.user != null &&
-            config.uploadResult.ftp.password != null &&
-            config.uploadResult.ftp.destination != null
+        assertion = !cfg.uploadResult.enable || (
+          cfg.uploadResult.ftp.address != null &&
+            cfg.uploadResult.ftp.port != null &&
+            cfg.uploadResult.ftp.username != null &&
+            cfg.uploadResult.ftp.passwordFile != null &&
+            cfg.uploadResult.ftp.destination != null
         );
         message = "All FTP options must be set if seed-exporter.uploadResult.enable is true.";
       }
     ];
+
+    users = {
+      users.seed-exporter = {
+        isSystemUser = true;
+        group = "seed-exporter";
+        home = "/home/seed-exporter";
+        createHome = true;
+        homeMode = "755";
+      };
+      groups.seed-exporter = { };
+    };
+
 
     systemd.timers.seed-exporter = {
       wantedBy = [ "timers.target" ];
@@ -109,9 +120,11 @@ in
           --log-level ${cfg.logLevel} \
           --crawler-path ${cfg.crawlerPath} \
           --result-path ${cfg.resultPath} \
-          # TODO: untested
-          ${optionalString (cfg.uploadResult.enable != null) "--upload-result --ftp-address ${cfg.uploadResult.address} --ftp-port ${cfg.uploadResult.ftp.port} --upload-user ${cfg.uploadResult.ftp.user} --upload-password ${cfg.uploadResult.ftp.password} --upload-path ${cfg.uploadResult.ftp.destination} "}
+          ${optionalString (cfg.uploadResult.enable != null) "--upload-result --ftp-address ${cfg.uploadResult.ftp.address} --ftp-port ${toString cfg.uploadResult.ftp.port} --ftp-username ${cfg.uploadResult.ftp.username} --ftp-password-file ${cfg.uploadResult.ftp.passwordFile} --ftp-destination ${cfg.uploadResult.ftp.destination} "}
         '';
+        ReadWriteDirectories = "/home/seed-exporter/";
+        User = "seed-exporter";
+        Group = "seed-exporter";
       };
     };
   };
