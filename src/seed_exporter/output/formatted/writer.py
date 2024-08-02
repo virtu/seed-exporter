@@ -1,6 +1,7 @@
 """Writer that outputs data in a makeseeds.py-compatible formatting."""
 
 import datetime as dt
+import gzip
 import logging as log
 from dataclasses import dataclass
 from pathlib import Path
@@ -27,12 +28,12 @@ class FormattedOutputWriter:
         df_sorted = df.sort_values(by=self.SORT_KEY, ascending=False)
         df_formatted = ColumnFormatter.format(df_sorted)
         timestamp_str = dt.datetime.strftime(self.timestamp, "%Y-%m-%dT%H-%M-%SZ")
-        filename = self.path / f"seeds-{timestamp_str}.txt"
-        self._write_formatted(df_formatted, filename)
-        log.info("Wrote %s rows to %s", len(df_formatted), filename)
+        filename = self.path / f"seeds-{timestamp_str}.txt.gz"
+        self._write_formatted_gz(df_formatted, filename)
+        log.info("Wrote %d rows to %s", len(df_formatted), filename)
 
     @staticmethod
-    def _write_formatted(df: pd.DataFrame, filename: Path):
+    def _write_formatted_gz(df: pd.DataFrame, filename: Path):
         """
         Write formatted data to file.
 
@@ -59,5 +60,6 @@ class FormattedOutputWriter:
             for _, row in df.iterrows()
         ]
         output = "\n".join([header] + formatted_rows)
-        with Path.open(filename, "w", encoding="UTF8") as file:
-            file.write(output)
+
+        with gzip.open(filename, "wb") as file:
+            file.write(output.encode("utf-8"))

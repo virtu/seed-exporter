@@ -43,9 +43,9 @@ class CrawlerInputReader:
         num_valid = len(df)
         df.loc[df["user_agent"].isnull(), "user_agent"] = "(empty)"
         log.debug(
-            "Dropping nodes with failed handshake (original=%d, dropped=%d, remaining=%d)",
-            num_total,
+            "Dropping %d nodes with failed handshake (original=%d, remaining=%d)",
             num_total - num_valid,
+            num_total,
             num_valid,
         )
         return df
@@ -73,7 +73,7 @@ class CrawlerInputReader:
         elapsed = dt.datetime.now() - time_start
         unique_nodes = result.drop_duplicates(subset=["address", "port"])
         log.info(
-            "Extracted %d unique nodes from %s rows in %d files in %.2fs",
+            "Extracted %d unique nodes from %d rows in %d files in %.2fs",
             len(unique_nodes),
             len(result),
             len(files),
