@@ -87,6 +87,7 @@ class FTPConfig(ComponentConfig):
 class Config(ComponentConfig):
     """Exporter settings."""
 
+    version: str
     timestamp: datetime.datetime
     log_level: int
     crawler_path: Path
@@ -102,9 +103,10 @@ class Config(ComponentConfig):
         if not Path(args.crawler_path).exists():
             raise ValueError(f"--crawler-path {args.crawler_path} does not exist.")
         if not Path(args.result_path).exists():
-            raise ValueError(f"--result-path {args.crawler_path} does not exist.")
+            raise ValueError(f"--result-path {args.result_path} does not exist.")
 
         return cls(
+            version=__version__,
             timestamp=datetime.datetime.utcnow(),
             log_level=args.log_level.upper(),
             crawler_path=Path(args.crawler_path),
