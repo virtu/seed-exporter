@@ -37,16 +37,6 @@ class DataProcessing:
       - user_agent: the user agent of the node software
     """
 
-    METADATA_COLS: ClassVar[list] = [
-        InCol.IP_ADDRESS,
-        InCol.PORT,
-        InCol.TIMESTAMP,
-        InCol.SERVICES,
-        InCol.BLOCKS,
-        InCol.VERSION,
-        InCol.USER_AGENT,
-    ]
-
     @staticmethod
     def compute_availability_shares(
         df: pd.DataFrame, window_name: str, window_delta: dt.timedelta
@@ -72,12 +62,11 @@ class DataProcessing:
         grouped = (
             filtered_df.groupby([InCol.IP_ADDRESS, InCol.PORT])
             .size()
-            .to_frame("count")
+            .to_frame(window_name + "_count")
             .reset_index()
         )
 
-        grouped[window_name] = grouped["count"] / total_timestamps
-        grouped = grouped.drop(columns=["count"])
+        grouped[window_name] = grouped[window_name + "_count"] / total_timestamps
         return grouped
 
     @staticmethod
@@ -88,11 +77,8 @@ class DataProcessing:
         The most recent data for each node is obtained by grouping by node and
         selecting the last entry.
         """
-        latest_entries = (
-            df.groupby([InCol.IP_ADDRESS, InCol.PORT]).nth(-1).reset_index()
-        )
-        metadata = latest_entries.loc[:, DataProcessing.METADATA_COLS].copy()
-        return metadata
+        df_meta = df.groupby([InCol.IP_ADDRESS, InCol.PORT]).nth(-1).reset_index()
+        return df_meta
 
     @staticmethod
     def process_data(df_input: pd.DataFrame) -> pd.DataFrame:
@@ -125,12 +111,11 @@ class DataProcessing:
             results, metadata, on=[InCol.IP_ADDRESS, InCol.PORT], how="outer"
         )
 
-        # postprocessing
-        # 1. fill in nan values in the availability shares columns
-        # 2. ensure there's no nan records in the remaining columns
-        # 3. add 'good' column (presume all nodes to be good)
-        share_cols = list(windows.keys())
+        log.debug("Filling in missing availability values...")
+        share_cols = list(windows.keys()) + [col + "_count" for col in windows]
         results[share_cols] = results[share_cols].fillna(0)
+
+        log.debug("Ensuring no data is missing...")
         nan_rows = results[results.isna().any(axis=1)]
         if not nan_rows.empty:
             error_str = f"Missing metadata in {len(nan_rows)} row(s):"
@@ -139,6 +124,81 @@ class DataProcessing:
                 address, port = row[InCol.IP_ADDRESS], row[InCol.PORT]
                 error_str += f"\n{address}:{port}: {nan_columns}"
             raise ValueError(f"Missing (meta)data: {error_str}")
-        # Todo: implement
-        results[StatsColumns.GOOD] = 1
+
+        log.debug("Evaluating node quality...")
+        results[StatsColumns.GOOD] = DataProcessing.is_good(results)
         return results
+
+    @staticmethod
+    def is_good(df: pd.DataFrame) -> pd.Series:
+        """
+        Evaluate node quality: good vs. bad.
+
+        Define a quality function and apply it to each column using df.apply().
+
+        Inspired by https://github.com/sipa/bitcoin-seeder/blob/ff482e465ff84ea6fa276d858ccb7ef32e3355d3/db.h#L104-L119.
+        """
+
+        default_ports = [0, 8333]  # beware of i2p, which does not use a port
+        node_network = 1 << 0
+        version_threshold = 70001
+        # if the block was seen during the last 30 days, it should not be more
+        # than 100 days of blocks behind the median blocks of other nodes
+        block_threshold = df[InCol.BLOCKS].median() - 100 * 24 * 6
+
+        def is_good_node(row: pd.DataFrame) -> bool:
+            """Evaluate node quality for a single node/row."""
+            if row[InCol.PORT] not in default_ports:
+                return False
+
+            # the goal is to get peers, not blocks from the node, so this
+            # requirement might unnecessarily limit the node pool
+            # if not row[InCol.PORT] & node_network:
+            #     return False
+            #
+
+            if row[InCol.VERSION] < version_threshold:
+                return False
+
+            if row[InCol.BLOCKS] < block_threshold:
+                return False
+
+            # Not sure about this. We wouldn't want to allow a node we've
+            # observed only a couple of times even it was reachable more than
+            # half of the time if that was a month ago
+            # if (total <= 3 && success * 2 >= total)
+            #     return True
+
+            def has_reliablility(window: str, share: float, count: int):
+                """Check if the node has been reliable in the given time window."""
+                return row[window] > share and row[window + "_count"] > count
+
+            if (
+                has_reliablility(StatsColumns.AVAILABILITY_2H, 0.85, 2)
+                or has_reliablility(StatsColumns.AVAILABILITY_8H, 0.70, 4)
+                or has_reliablility(StatsColumns.AVAILABILITY_1D, 0.55, 8)
+                or has_reliablility(StatsColumns.AVAILABILITY_7D, 0.45, 16)
+                or has_reliablility(StatsColumns.AVAILABILITY_30D, 0.35, 32)
+            ):
+                return True
+            return False
+
+        good_col = df.apply(is_good_node, axis=1)
+
+        log.info("Node analysis:")
+        for net_type in ["all", "ipv4", "ipv6", "onion_v3", "i2p", "cjdns"]:
+            dg = df[good_col]
+            df_net_good = dg[dg[InCol.NETWORK] == net_type] if net_type != "all" else dg
+            df_net_all = df[df[InCol.NETWORK] == net_type] if net_type != "all" else df
+            num_good = len(df_net_good)
+            num_total = len(df_net_all)
+            share_good = num_good / num_total if num_total > 0 else 0
+            log.info(
+                "network=%s, good=%d (%.1f%%), total=%d",
+                net_type,
+                num_good,
+                share_good * 100,
+                num_total,
+            )
+
+        return good_col

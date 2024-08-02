@@ -10,6 +10,7 @@ class InputColumns:
 
     IP_ADDRESS: ClassVar[str] = "address"
     PORT: ClassVar[str] = "port"
+    NETWORK: ClassVar[str] = "network"
     TIMESTAMP: ClassVar[str] = "handshake_timestamp"
     SERVICES: ClassVar[str] = "services"
     BLOCKS: ClassVar[str] = "latest_block"

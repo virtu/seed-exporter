@@ -75,6 +75,7 @@ class ColumnFormatter:
             ),
             align="<",
         ),
+        ColFmt(OutCol.GOOD, StatCol.GOOD, lambda x: f"{int(x)}"),
         ColFmt(OutCol.TIMESTAMP, InCol.TIMESTAMP, lambda x: f"{int(x)}"),
         ColFmt(OutCol.AVAILABILITY_2H, StatCol.AVAILABILITY_2H, lambda x: f"{x:.2%}"),
         ColFmt(OutCol.AVAILABILITY_8H, StatCol.AVAILABILITY_8H, lambda x: f"{x:.2%}"),
