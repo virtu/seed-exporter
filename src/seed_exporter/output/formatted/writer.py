@@ -22,7 +22,7 @@ class FormattedOutputWriter:
     timestamp: dt.datetime
     SORT_KEY: ClassVar[str] = StatsColumns.AVAILABILITY_30D
 
-    def write(self, df: pd.DataFrame):
+    def write(self, df: pd.DataFrame) -> Path:
         """Sort columns, apply formatting and write results."""
         # sort key might no longer be a number after formatting, so sort first
         df_sorted = df.sort_values(by=self.SORT_KEY, ascending=False)
@@ -31,6 +31,7 @@ class FormattedOutputWriter:
         filename = self.path / f"seeds-{timestamp_str}.txt.gz"
         self._write_formatted_gz(df_formatted, filename)
         log.info("Wrote %d rows to %s", len(df_formatted), filename)
+        return filename
 
     @staticmethod
     def _write_formatted_gz(df: pd.DataFrame, filename: Path):
