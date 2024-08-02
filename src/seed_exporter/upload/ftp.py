@@ -29,9 +29,10 @@ class FtpUploader:
                     ftp.storbinary(f"STOR {self.conf.destination.name}", file)
                 ftp.quit()
             log.info(
-                "Uploaded %s to ftp://<redacted>/%s",
+                "Uploaded %s to ftp://<redacted>/%s (%.1fkB uploaded)",
                 str(src),
                 str(self.conf.destination),
+                src.stat().st_size / 1024,
             )
             return True
         except Exception as e:  # pylint: disable=broad-except

@@ -19,17 +19,14 @@ class ComponentConfig:
         return asdict(self)
 
     def __str__(self):
-        """Return string representation.
-
-        - Redact password fields
-        - Pretty-print datetime and PosixPath objects
+        """
+        Return string representation.
+        Pretty-print datetime and PosixPath objects.
         """
         parts = []
         for field in fields(self):
             value = getattr(self, field.name)
-            if field.name == "password":
-                parts.append(f"{field.name}=<redacted>")
-            elif isinstance(value, datetime.datetime):
+            if isinstance(value, datetime.datetime):
                 parts.append(f"{field.name}={value.isoformat(timespec='seconds')}Z")
             elif isinstance(value, PosixPath):
                 parts.append(f"{field.name}={value.name}")
@@ -48,6 +45,13 @@ class FTPConfig(ComponentConfig):
     password: str
     destination: Path
 
+    def __str__(self):
+        """Return string representation, ensuring redaction of critital data."""
+        return (
+            f"FTPConfig(address=***, port={self.port}, username=***, "
+            f"password=***, destination={self.destination})"
+        )
+
     @staticmethod
     def get_ftp_password(args: argparse.Namespace) -> str:
         """Read FTP password from file."""
@@ -65,7 +69,6 @@ class FTPConfig(ComponentConfig):
             return FTPConfig("", 0, "", "", Path("/"))
 
         for arg in [attr for attr in dir(args) if attr.startswith("ftp_")]:
-            print(f"arg={arg}, value={getattr(args, arg)}")
             if not getattr(args, arg):
                 raise ValueError(
                     f"--{arg.replace('_', '-')} is required when --upload-result is set."
