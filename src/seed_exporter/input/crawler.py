@@ -7,9 +7,11 @@ from pathlib import Path
 
 import pandas as pd
 
+from seed_exporter.input import InputColumns
+
 
 @dataclass
-class InputReader:
+class CrawlerInputReader:
     """Class to read input data from p2p-crawler results."""
 
     path: Path
@@ -29,13 +31,13 @@ class InputReader:
     def postprocess_data(df: pd.DataFrame) -> pd.DataFrame:
         """Perform post-processing:
         1. Ensure DateTimeIndex
-        2. Rename host column to address
+        2. Rename host column to InputColumns.IP_ADDRESS (address)
         3. Drop nodes who did not complete the handshake
         4. Replace missing user-agent data with "(empty)"
         """
 
         df.index = pd.to_datetime(df.index)
-        df.rename(columns={"host": "address"}, inplace=True)
+        df.rename(columns={"host": InputColumns.IP_ADDRESS}, inplace=True)
         num_total = len(df)
         df = df[df["handshake_successful"] == True]
         num_valid = len(df)
@@ -66,7 +68,7 @@ class InputReader:
             df["timestamp"] = timestamp
             data_frames.append(df)
         combined_df = pd.concat(data_frames).set_index("timestamp")
-        result = InputReader.postprocess_data(combined_df)
+        result = CrawlerInputReader.postprocess_data(combined_df)
 
         elapsed = dt.datetime.now() - time_start
         unique_nodes = result.drop_duplicates(subset=["address", "port"])
