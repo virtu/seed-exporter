@@ -185,20 +185,25 @@ class DataProcessing:
 
         good_col = df.apply(is_good_node, axis=1)
 
-        log.info("Node analysis:")
-        for net_type in ["all", "ipv4", "ipv6", "onion_v3", "i2p", "cjdns"]:
-            dg = df[good_col]
-            df_net_good = dg[dg[InCol.NETWORK] == net_type] if net_type != "all" else dg
-            df_net_all = df[df[InCol.NETWORK] == net_type] if net_type != "all" else df
+        log.info(
+            "Node analysis: network=%-9s total=%-8d good=%-8d share=%.1f%%",
+            "all",
+            len(df),
+            good_col.sum(),
+            good_col.mean() * 100,
+        )
+        for net_type in ["ipv4", "ipv6", "onion_v3", "i2p", "cjdns"]:
+            df_net_good = df[good_col][df[good_col][InCol.NETWORK] == net_type]
+            df_net_all = df[df[InCol.NETWORK] == net_type]
             num_good = len(df_net_good)
             num_total = len(df_net_all)
             share_good = num_good / num_total if num_total > 0 else 0
             log.info(
-                "network=%s, good=%d (%.1f%%), total=%d",
+                "               network=%-9s total=%-8d good=%-8d share=%.1f%%",
                 net_type,
+                num_total,
                 num_good,
                 share_good * 100,
-                num_total,
             )
 
         return good_col

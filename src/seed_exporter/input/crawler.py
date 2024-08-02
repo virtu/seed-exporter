@@ -56,7 +56,8 @@ class CrawlerInputReader:
         current_day = self.timestamp.date()
         date_range = [current_day - dt.timedelta(days=i) for i in range(30)]
         files = self._find_matching_files(date_range)
-        log.debug("Found %s input files: %s", len(files), [f.name for f in files])
+        log.info("Reading input from %s crawler result files...", len(files))
+        log.debug("Input files: %s", [f.name for f in files])
 
         time_start = dt.datetime.now()
         data_frames = []
