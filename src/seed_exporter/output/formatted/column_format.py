@@ -22,8 +22,8 @@ class OutCol:
     AVAILABILITY_1D: ClassVar[str] = "%(1d)"
     AVAILABILITY_7D: ClassVar[str] = "%(7d)"
     AVAILABILITY_30D: ClassVar[str] = "%(30d)"
-    SERVICES: ClassVar[str] = "svcs"
     BLOCKS: ClassVar[str] = "blocks"
+    SERVICES: ClassVar[str] = "svcs"
     VERSION: ClassVar[str] = "version"
     USER_AGENT: ClassVar[str] = "useragent"
 
@@ -82,8 +82,8 @@ class ColumnFormatter:
         ColFmt(OutCol.AVAILABILITY_1D, StatCol.AVAILABILITY_1D, lambda x: f"{x:.2%}"),
         ColFmt(OutCol.AVAILABILITY_7D, StatCol.AVAILABILITY_7D, lambda x: f"{x:.2%}"),
         ColFmt(OutCol.AVAILABILITY_30D, StatCol.AVAILABILITY_30D, lambda x: f"{x:.2%}"),
-        ColFmt(OutCol.SERVICES, InCol.SERVICES, lambda x: f"{int(x):08x}"),
         ColFmt(OutCol.BLOCKS, InCol.BLOCKS, lambda x: f"{int(x)}"),
+        ColFmt(OutCol.SERVICES, InCol.SERVICES, lambda x: f"{int(x):08x}"),
         ColFmt(OutCol.VERSION, InCol.VERSION, lambda x: f"{int(x)}"),
         ColFmt(OutCol.USER_AGENT, InCol.USER_AGENT, lambda x: f'"{x}"', align="<"),
     ]
