@@ -15,7 +15,7 @@ from .columns import StatsColumns
 class NodeQuality:
     """Class for evaluating node quality."""
 
-    DEFAULT_PORTS: ClassVar[list[int]] = [0, 8333]
+    DEFAULT_PORT: ClassVar[int] = 8333
     NODE_NETWORK: ClassVar[int] = 1 << 0
     VERSION_THRESHOLD: ClassVar[int] = 70001
 
@@ -47,6 +47,18 @@ class NodeQuality:
         return df[InCol.BLOCKS].median() - 100 * 24 * 6
 
     @staticmethod
+    def uses_standard_port(row: pd.DataFrame) -> bool:
+        """
+        Determine if node uses default port (8333 for all network types except
+        I2P, which uses dummy port 0).
+        """
+        if row[InCol.NETWORK] != "i2p" and row[InCol.PORT] == NodeQuality.DEFAULT_PORT:
+            return True
+        if row[InCol.NETWORK] == "i2p" and row[InCol.PORT] == 0:
+            return True
+        return False
+
+    @staticmethod
     def evaluate(df: pd.DataFrame) -> pd.Series:
         """
         Evaluate node quality: good vs. bad.
@@ -56,14 +68,12 @@ class NodeQuality:
 
         def evaluate_node(row: pd.DataFrame) -> bool:
             """Evaluate node quality for a single node/row."""
-            if row[InCol.PORT] not in NodeQuality.DEFAULT_PORTS:
+
+            if not NodeQuality.uses_standard_port(row):
                 return False
 
-            # The goal is to get peers, not blocks from the node, so this
-            # requirement might unnecessarily limit the node pool
-            #
-            # if not row[InCol.PORT] & NodeQuality.NODE_NETWORK:
-            #     return False
+            if not row[InCol.PORT] & NodeQuality.NODE_NETWORK:
+                return False
 
             if row[InCol.VERSION] < NodeQuality.VERSION_THRESHOLD:
                 return False
