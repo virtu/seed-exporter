@@ -17,3 +17,4 @@ class InputColumns:
     VERSION: ClassVar[str] = "version"
     USER_AGENT: ClassVar[str] = "user_agent"
     CONNECTION_TIME: ClassVar[str] = "time_connect"
+    HANDSHAKE_SUCCESSFUL: ClassVar[str] = "handshake_successful"

@@ -1,6 +1,7 @@
 """Module for processing data and calculating statistics."""
 
 import logging as log
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -22,6 +23,7 @@ class NodeQuality:
         "regular": 5 * 1000 * 0.5,  # 5s - 50% (prefer responsive nodes)
         "socks5": 20 * 1000 * 1.2,  # 20s + 20% (address performance fluctuations)
     }
+    STATS: ClassVar[defaultdict] = defaultdict(lambda: defaultdict(lambda: 0))
 
     @staticmethod
     def considered_reliable(row: pd.DataFrame) -> bool:
@@ -85,53 +87,92 @@ class NodeQuality:
         def evaluate_node(row: pd.DataFrame) -> bool:
             """Evaluate node quality for a single node/row."""
 
+            NodeQuality.STATS[row[InCol.NETWORK]]["total"] += 1
+
             if not NodeQuality.uses_standard_port(row):
+                NodeQuality.STATS[row[InCol.NETWORK]]["port"] += 1
                 return False
 
-            if not row[InCol.PORT] & NodeQuality.NODE_NETWORK:
+            if not row[InCol.SERVICES] & NodeQuality.NODE_NETWORK:
+                NodeQuality.STATS[row[InCol.NETWORK]]["services"] += 1
                 return False
 
             if row[InCol.VERSION] < NodeQuality.VERSION_THRESHOLD:
+                NodeQuality.STATS[row[InCol.NETWORK]]["version"] += 1
                 return False
 
             if row[InCol.BLOCKS] < NodeQuality.get_block_threshold(df):
+                NodeQuality.STATS[row[InCol.NETWORK]]["blocks"] += 1
                 return False
 
             if NodeQuality.exceeds_timeouts(row):
+                NodeQuality.STATS[row[InCol.NETWORK]]["timeout"] += 1
                 return False
 
             # Not sure about this. We wouldn't want to allow a node we've
             # observed only a couple of times even it was reachable more than
             # half of the time if that was a month ago
-            # if (total <= 3 && success * 2 >= total)
-            #     return True
+            # if not (total <= 3 && success * 2 >= total)
+            #     return False
 
-            if NodeQuality.considered_reliable(row):
-                return True
+            if not NodeQuality.considered_reliable(row):
+                NodeQuality.STATS[row[InCol.NETWORK]]["reliability"] += 1
+                return False
 
-            return False
+            NodeQuality.STATS[row[InCol.NETWORK]]["good"] += 1
+            return True
 
         good_col = df.apply(evaluate_node, axis=1)
 
-        log.info(
-            "Node analysis: network=%-9s total=%-8d good=%-8d share=%.1f%%",
-            "all",
-            len(df),
-            good_col.sum(),
-            good_col.mean() * 100,
-        )
-        for net_type in ["ipv4", "ipv6", "onion_v3", "i2p", "cjdns"]:
-            df_net_good = df[good_col][df[good_col][InCol.NETWORK] == net_type]
-            df_net_all = df[df[InCol.NETWORK] == net_type]
-            num_good = len(df_net_good)
-            num_total = len(df_net_all)
-            share_good = num_good / num_total if num_total > 0 else 0
-            log.info(
-                "               network=%-9s total=%-8d good=%-8d share=%.1f%%",
-                net_type,
-                num_total,
-                num_good,
-                share_good * 100,
-            )
+        NodeQuality.log_statistics()
 
         return good_col
+
+    @staticmethod
+    def log_statistics():
+        """Log node evaluation statistics."""
+
+        def log_aligned(fmt, *args):
+            """Helper functions to log columns with alignment."""
+            log.info(fmt, *[str(arg) for arg in args])
+
+        cols = [
+            "Network",
+            "Total",
+            "Good",
+            "Share",
+            "Port",
+            "Services",
+            "Version",
+            "Blocks",
+            "Timeout",
+            "Reliability",
+        ]
+
+        # Create format string
+        # First row is left-aligned, other columns are right-aligned.
+        # Add extra whitespace to all column header string lengths and make
+        # sure second to last columns have minimum width of 6.
+        fmt = f"%-{len(cols[0])+1}s "
+        padding = [max(len(col) + 1, 6) for col in cols[1:]]
+        fmt = fmt + " ".join([f"%{pad}s" for pad in padding])
+
+        log.info("Evaluation statistics:")
+        log_aligned(fmt, *cols)
+        for net_type in ["ipv4", "ipv6", "onion_v3", "i2p", "cjdns"]:
+            stats = NodeQuality.STATS[net_type]
+            good_share = stats["good"] / stats["total"] if stats["total"] > 0 else 0
+            good_share = f"{good_share:.1%}"
+            log_aligned(
+                fmt,
+                net_type if net_type != "onion_v3" else "onion",
+                stats["total"],
+                stats["good"],
+                good_share,
+                stats["port"],
+                stats["services"],
+                stats["version"],
+                stats["blocks"],
+                stats["timeout"],
+                stats["reliability"],
+            )

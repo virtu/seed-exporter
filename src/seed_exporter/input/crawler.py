@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from seed_exporter.input import InputColumns
+from seed_exporter.input import InputColumns as InCol
 
 
 @dataclass
@@ -33,15 +33,18 @@ class CrawlerInputReader:
         1. Ensure DateTimeIndex
         2. Rename host column to InputColumns.IP_ADDRESS (address)
         3. Drop nodes who did not complete the handshake
-        4. Replace missing user-agent data with "(empty)"
+        4. Fix some columns data types
+        5. Replace missing user-agent data with "(empty)"
         """
 
         df.index = pd.to_datetime(df.index)
-        df.rename(columns={"host": InputColumns.IP_ADDRESS}, inplace=True)
+        df.rename(columns={"host": InCol.IP_ADDRESS}, inplace=True)
         num_total = len(df)
-        df = df[df["handshake_successful"] == True]
+        # create copy after slicing to avoid pandas SettingWithCopyWarning
+        df = df[df[InCol.HANDSHAKE_SUCCESSFUL]].copy()
         num_valid = len(df)
-        df.loc[df["user_agent"].isnull(), "user_agent"] = "(empty)"
+        df[InCol.SERVICES] = df[InCol.SERVICES].astype(int)
+        df.loc[df[InCol.USER_AGENT].isnull(), InCol.USER_AGENT] = "(empty)"
         log.debug(
             "Dropping %d nodes with failed handshake (original=%d, remaining=%d)",
             num_total - num_valid,
