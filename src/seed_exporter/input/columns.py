@@ -16,3 +16,4 @@ class InputColumns:
     BLOCKS: ClassVar[str] = "latest_block"
     VERSION: ClassVar[str] = "version"
     USER_AGENT: ClassVar[str] = "user_agent"
+    CONNECTION_TIME: ClassVar[str] = "time_connect"
