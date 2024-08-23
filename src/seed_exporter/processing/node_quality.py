@@ -18,6 +18,10 @@ class NodeQuality:
     DEFAULT_PORT: ClassVar[int] = 8333
     NODE_NETWORK: ClassVar[int] = 1 << 0
     VERSION_THRESHOLD: ClassVar[int] = 70001
+    CONNECTION_TIMEOUTS: ClassVar[dict[str, float]] = {
+        "regular": 5 * 1000 * 0.5,  # 5s - 50% (prefer responsive nodes)
+        "socks5": 20 * 1000 * 1.2,  # 20s + 20% (address performance fluctuations)
+    }
 
     @staticmethod
     def considered_reliable(row: pd.DataFrame) -> bool:
@@ -59,6 +63,18 @@ class NodeQuality:
         return False
 
     @staticmethod
+    def exceeds_timeouts(row: pd.DataFrame) -> bool:
+        """
+        Determine if node exceeds connection timeouts (see NodeQuality.CONNECTION_TIMEOUTS).
+        """
+        if row[InCol.NETWORK] in ("onion_v3", "i2p"):
+            if row[InCol.CONNECTION_TIME] < NodeQuality.CONNECTION_TIMEOUTS["socks5"]:
+                return False
+        if row[InCol.CONNECTION_TIME] < NodeQuality.CONNECTION_TIMEOUTS["regular"]:
+            return False
+        return True
+
+    @staticmethod
     def evaluate(df: pd.DataFrame) -> pd.Series:
         """
         Evaluate node quality: good vs. bad.
@@ -79,6 +95,9 @@ class NodeQuality:
                 return False
 
             if row[InCol.BLOCKS] < NodeQuality.get_block_threshold(df):
+                return False
+
+            if NodeQuality.exceeds_timeouts(row):
                 return False
 
             # Not sure about this. We wouldn't want to allow a node we've
