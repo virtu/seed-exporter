@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "seed-exporter"
-version = "1.2.1"
+version = "1.2.2"
 description = "Export viable seeds from data generated with p2p-crawler"
 authors = ["virtu <virtu@cryptic.to>"]
 license = "MIT"

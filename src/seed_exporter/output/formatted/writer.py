@@ -71,7 +71,7 @@ class FormattedOutputWriter:
             ).rstrip()
             for _, row in df.iterrows()
         ]
-        output = "\n".join([run_info] + [header] + formatted_rows)
+        output = "\n".join([run_info] + [header] + formatted_rows) + "\n"
 
         with gzip.open(filename, "wb") as file:
             file.write(output.encode("utf-8"))
