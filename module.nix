@@ -114,6 +114,7 @@ in
 
     systemd.services.seed-exporter = {
       description = "seed-exporter";
+      wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
       serviceConfig = {
         ExecStart = ''${seed-exporter}/bin/seed-exporter \
